@@ -1,8 +1,8 @@
 import os
-
+import sys
 from dotenv import load_dotenv
 from google import genai
-
+from google.genai import types
 
 def main():
     load_dotenv()
@@ -13,15 +13,29 @@ def main():
         return
 
     client = genai.Client(api_key=api_key)
-
     model = "gemini-2.0-flash-001"
-    contents = "Why is Boot.dev such a great place to learn backend development? Use one paragraph maximum."
+
+    if len(sys.argv) < 2:
+        print("Usage: python3 main.py \"Your prompt here\"")
+        sys.exit(1)
+
+    user_prompt = sys.argv[1]
+
+    messages = [
+        types.Content(
+            role="user",
+            parts=[types.Part(text=user_prompt)]
+        ),
+    ]
 
     prompt_tokens = None
     response_tokens = None
 
     try:
-        response = client.models.generate_content(model=model, contents=contents)
+        response = client.models.generate_content(
+            model=model,
+            contents=messages
+        )
 
         # Check if usage_metadata exists and is not None
         if response.usage_metadata:

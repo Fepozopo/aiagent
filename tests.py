@@ -1,11 +1,14 @@
-from functions.get_files_info import get_files_info
+
+
+from functions.get_file_content import get_file_content
 
 if __name__ == "__main__":
-    print("get_files_info('calculator', '.'):")
-    print(get_files_info("calculator", "."))
-    print("\nget_files_info('calculator', 'pkg'):")
-    print(get_files_info("calculator", "pkg"))
-    print("\nget_files_info('calculator', '/bin'):")
-    print(get_files_info("calculator", "/bin"))
-    print("\nget_files_info('calculator', '../'):")
-    print(get_files_info("calculator", "../"))
+    print("get_file_content('calculator', 'main.py'):")
+    content_main = get_file_content("calculator", "main.py")
+    print(content_main)
+    print("\nget_file_content('calculator', 'pkg/calculator.py'):")
+    content_pkg = get_file_content("calculator", "pkg/calculator.py")
+    print(content_pkg)
+    print("\nget_file_content('calculator', '/bin/cat'):")
+    content_error = get_file_content("calculator", "/bin/cat")
+    print(content_error)

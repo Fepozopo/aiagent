@@ -2,6 +2,7 @@ import argparse
 import os
 import sys
 from dotenv import load_dotenv
+from functions.call_function import call_function
 from google import genai
 from google.genai import types
 
@@ -143,7 +144,14 @@ def main():
                     for part in candidate.content.parts:
                         if hasattr(part, "function_call") and part.function_call:
                             function_call = part.function_call
-                            print(f"Calling function: {function_call.name} with arguments: {function_call.args}")
+                            function_call_result = call_function(function_call, verbose=verbose)
+                            # Check for .parts[0].function_response.response
+                            try:
+                                response_obj = function_call_result.parts[0].function_response.response
+                            except Exception:
+                                raise RuntimeError("Function call did not return a valid response object.")
+                            if verbose:
+                                print(f"-> {response_obj}")
                         elif hasattr(part, "text") and part.text:
                             print(part.text)
         else:

@@ -118,46 +118,64 @@ def main():
         if verbose:
             print(f"Working on: {user_prompt}")
 
-        response = client.models.generate_content(
-            model=model,
-            contents=messages,
-            config=types.GenerateContentConfig(
-                tools=[available_functions], system_instruction=system_prompt
-            ),
-        )
+        max_iterations = 20
+        for iteration in range(max_iterations):
+            response = client.models.generate_content(
+                model=model,
+                contents=messages,
+                config=types.GenerateContentConfig(
+                    tools=[available_functions], system_instruction=system_prompt
+                ),
+            )
 
-        # Check if usage_metadata exists and is not None
-        if response.usage_metadata:
-            prompt_tokens = response.usage_metadata.prompt_token_count
-            response_tokens = response.usage_metadata.candidates_token_count
-        else:
-            if verbose:
-                print("Warning: usage_metadata is None. Token count not available.")
-            if response.prompt_feedback:
-                print(f"Prompt Feedback: {response.prompt_feedback}")
+            # Track tokens if available
+            if response.usage_metadata:
+                prompt_tokens = response.usage_metadata.prompt_token_count
+                response_tokens = response.usage_metadata.candidates_token_count
+            else:
+                if verbose:
+                    print("Warning: usage_metadata is None. Token count not available.")
+                if response.prompt_feedback:
+                    print(f"Prompt Feedback: {response.prompt_feedback}")
 
-
-        # Check if the LLM called a function
-        if hasattr(response, "candidates") and response.candidates:
-            for candidate in response.candidates:
-                if hasattr(candidate, "content") and hasattr(candidate.content, "parts"):
-                    for part in candidate.content.parts:
-                        if hasattr(part, "function_call") and part.function_call:
-                            function_call = part.function_call
-                            function_call_result = call_function(function_call, verbose=verbose)
-                            # Check for .parts[0].function_response.response
-                            try:
-                                response_obj = function_call_result.parts[0].function_response.response
-                            except Exception:
-                                raise RuntimeError("Function call did not return a valid response object.")
-                            if verbose:
-                                print(f"-> {response_obj}")
-                        elif hasattr(part, "text") and part.text:
-                            print(part.text)
-        else:
-            # Fallback: print text if available
-            if hasattr(response, "text"):
-                print(response.text)
+            function_called = False
+            # Add all candidates' .content to messages
+            if hasattr(response, "candidates") and response.candidates:
+                for candidate in response.candidates:
+                    if hasattr(candidate, "content"):
+                        messages.append(candidate.content)
+                        # Check for function call in parts
+                        if hasattr(candidate.content, "parts"):
+                            for part in candidate.content.parts:
+                                if hasattr(part, "function_call") and part.function_call:
+                                    function_called = True
+                                    function_call = part.function_call
+                                    function_call_result = call_function(function_call, verbose=verbose)
+                                    # Append returned types.Content to messages
+                                    messages.append(function_call_result)
+                                    # Optionally print function response if verbose
+                                    if verbose:
+                                        try:
+                                            response_obj = function_call_result.parts[0].function_response.response
+                                            print(f"-> {response_obj}")
+                                        except Exception:
+                                            print("Function call did not return a valid response object.")
+            # If a function was called, continue to next iteration
+            if function_called:
+                continue
+            # Otherwise, print the LLM's final response and break
+            else:
+                # Fallback: print text if available
+                if hasattr(response, "text") and response.text:
+                    print(response.text)
+                else:
+                    # Try to print any text parts from candidates
+                    for candidate in getattr(response, "candidates", []):
+                        if hasattr(candidate, "content") and hasattr(candidate.content, "parts"):
+                            for part in candidate.content.parts:
+                                if hasattr(part, "text") and part.text:
+                                    print(part.text)
+                break
 
         if verbose:
             print(f"Prompt tokens: {prompt_tokens}")

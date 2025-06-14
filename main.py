@@ -1,10 +1,12 @@
 import argparse
 import os
 import sys
+
 from dotenv import load_dotenv
-from functions.call_function import call_function
 from google import genai
 from google.genai import types
+
+from functions.call_function import call_function
 
 
 def main():
@@ -28,6 +30,8 @@ def main():
     - Write or overwrite files
 
     All paths you provide should be relative to the working directory. You do not need to specify the working directory in your function calls as it is automatically injected for security reasons.
+
+    If you write or overwrite any files, list each of those files, stating whether you created them or modified them.
     """
 
     parser = argparse.ArgumentParser(description="Gemini AI Command Line Client")
@@ -147,19 +151,28 @@ def main():
                         # Check for function call in parts
                         if hasattr(candidate.content, "parts"):
                             for part in candidate.content.parts:
-                                if hasattr(part, "function_call") and part.function_call:
+                                if (
+                                    hasattr(part, "function_call")
+                                    and part.function_call
+                                ):
                                     function_called = True
                                     function_call = part.function_call
-                                    function_call_result = call_function(function_call, verbose=verbose)
+                                    function_call_result = call_function(
+                                        function_call, verbose=verbose
+                                    )
                                     # Append returned types.Content to messages
                                     messages.append(function_call_result)
                                     # Optionally print function response if verbose
                                     if verbose:
                                         try:
-                                            response_obj = function_call_result.parts[0].function_response.response
+                                            response_obj = function_call_result.parts[
+                                                0
+                                            ].function_response.response
                                             print(f"-> {response_obj}")
                                         except Exception:
-                                            print("Function call did not return a valid response object.")
+                                            print(
+                                                "Function call did not return a valid response object."
+                                            )
             # If a function was called, continue to next iteration
             if function_called:
                 continue
@@ -171,7 +184,9 @@ def main():
                 else:
                     # Try to print any text parts from candidates
                     for candidate in getattr(response, "candidates", []):
-                        if hasattr(candidate, "content") and hasattr(candidate.content, "parts"):
+                        if hasattr(candidate, "content") and hasattr(
+                            candidate.content, "parts"
+                        ):
                             for part in candidate.content.parts:
                                 if hasattr(part, "text") and part.text:
                                     print(part.text)

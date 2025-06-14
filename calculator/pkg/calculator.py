@@ -24,9 +24,19 @@ class Calculator:
         operators = []
 
         for token in tokens:
-            if token in self.operators:
+            if token == "(":
+                operators.append(token)
+            elif token == ")":
+                while operators and operators[-1] != "(":
+                    self._apply_operator(operators, values)
+                if operators:
+                    operators.pop()  # Remove the opening parenthesis
+                else:
+                    raise ValueError("Unbalanced parentheses")
+            elif token in self.operators:
                 while (
                     operators
+                    and operators[-1] != "("
                     and operators[-1] in self.operators
                     and self.precedence[operators[-1]] >= self.precedence[token]
                 ):
@@ -39,6 +49,8 @@ class Calculator:
                     raise ValueError(f"invalid token: {token}")
 
         while operators:
+            if operators[-1] == "(":
+                raise ValueError("Unbalanced parentheses")
             self._apply_operator(operators, values)
 
         if len(values) != 1:
